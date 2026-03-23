@@ -1,13 +1,116 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
+}
+
+model Member {
+  id              BigInt   @id @default(autoincrement()) @db.BigInt
+  email           String   @unique @db.VarChar(255)
+  password        String   @db.VarChar(255)
+  name            String   @db.VarChar(255)
+  profileImageUrl String?  @map("profile_image_url") @db.VarChar(255)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  crewMembers CrewMember[]
+
+  @@map("member")
+}
+
+model Book {
+  id            BigInt  @id @default(autoincrement()) @db.BigInt
+  isbn          String  @unique @db.VarChar(13)
+  title         String  @db.VarChar(255)
+  author        String  @db.VarChar(255)
+  coverImageUrl String? @map("cover_image_url") @db.VarChar(255)
+  description   String? @db.Text
+
+  crewBooks CrewBook[]
+
+  @@map("book")
+}
+
+model Crew {
+  id           BigInt         @id @default(autoincrement()) @db.BigInt
+  name         String         @db.VarChar(255)
+  visibility   CrewVisibility @default(PUBLIC)
+  crewImageUrl String?        @map("crew_image_url") @db.VarChar(255)
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  crewMembers CrewMember[]
+  crewBooks   CrewBook[]
+
+  @@map("crew")
+}
+
+model CrewMember {
+  id       BigInt         @id @default(autoincrement()) @db.BigInt
+  crewId   BigInt         @map("crew_id") @db.BigInt
+  memberId BigInt         @map("member_id") @db.BigInt
+  nickname String         @db.VarChar(20)
+  role     CrewMemberRole @default(MEMBER)
+  joinedAt DateTime       @default(now()) @map("joined_at") @db.Timestamp(0)
+
+  crew    Crew     @relation(fields: [crewId], references: [id])
+  member  Member   @relation(fields: [memberId], references: [id])
+  reviews Review[]
+
+  @@unique([crewId, memberId])
+  @@index([crewId])
+  @@index([memberId])
+  @@map("crew_member")
+}
+
+model CrewBook {
+  id        BigInt         @id @default(autoincrement()) @db.BigInt
+  crewId    BigInt         @map("crew_id") @db.BigInt
+  bookId    BigInt         @map("book_id") @db.BigInt
+  status    CrewBookStatus @default(READING)
+  startedAt DateTime       @default(now()) @map("started_at") @db.Timestamp(0)
+  endedAt   DateTime?      @map("ended_at") @db.Timestamp(0)
+
+  crew    Crew     @relation(fields: [crewId], references: [id])
+  book    Book     @relation(fields: [bookId], references: [id])
+  reviews Review[]
+
+  @@index([crewId])
+  @@index([bookId])
+  @@map("crew_book")
+}
+
+model Review {
+  id           BigInt   @id @default(autoincrement()) @db.BigInt
+  crewBookId   BigInt   @map("crew_book_id") @db.BigInt
+  crewMemberId BigInt   @map("crew_member_id") @db.BigInt
+  content      String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  crewBook   CrewBook   @relation(fields: [crewBookId], references: [id])
+  crewMember CrewMember @relation(fields: [crewMemberId], references: [id])
+
+  @@index([crewBookId])
+  @@index([crewMemberId])
+  @@map("review")
+}
+
+enum CrewVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum CrewMemberRole {
+  MEMBER
+  LEADER
+}
+
+enum CrewBookStatus {
+  PENDING
+  READING
+  COMPLETED
 }
